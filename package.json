@@ -1,0 +1,34 @@
+{
+  "name": "sweety",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sweety - a blood glucose tracker built with React, Express and PostgreSQL",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "db:setup": "npm run db:setup -w server",
+    "db:seed": "npm run db:seed -w server",
+    "worker": "npm run worker -w server",
+    "job:run": "npm run job:run -w server",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:server": "npm run test -w server",
+    "test:client": "npm run test -w client",
+    "docs:html": "node scripts/build-docs.mjs --html-only",
+    "docs:pdf": "node scripts/build-docs.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "highlight.js": "^11.11.1",
+    "marked": "^15.0.7",
+    "playwright-core": "^1.50.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
