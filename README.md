@@ -1,6 +1,6 @@
 # Sweety
 
-A blood glucose tracker for the Kenpath Junior Full Stack Developer assignment. A patient
+A blood glucose tracker a patient
 registers, records up to four readings a day, and reviews daily, month-to-date and monthly
 reports. A doctor account can read the reports of patients assigned to it.
 
