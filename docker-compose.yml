@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sweety-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sweety}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sweety}
+      POSTGRES_DB: ${POSTGRES_DB:-sweety}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sweety_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sweety} -d ${POSTGRES_DB:-sweety}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: sweety-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+    container_name: sweety-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://${POSTGRES_USER:-sweety}:${POSTGRES_PASSWORD:-sweety}@db:5432/${POSTGRES_DB:-sweety}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required - copy .env.example to .env and set a secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+      CLIENT_ORIGIN: http://localhost:8080,http://localhost:5173
+      REDIS_URL: redis://redis:6379
+      REPORT_CACHE_TTL_SECONDS: ${REPORT_CACHE_TTL_SECONDS:-300}
+    ports:
+      - "4000:4000"
+    command: sh -c "npm run db:setup && node src/server.js"
+
+  worker:
+    build:
+      context: ./server
+    container_name: sweety-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-sweety}:${POSTGRES_PASSWORD:-sweety}@db:5432/${POSTGRES_DB:-sweety}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required - copy .env.example to .env and set a secret}
+      REDIS_URL: redis://redis:6379
+      ENABLE_REMINDER_JOB: "true"
+      REMINDER_CRON: ${REMINDER_CRON:-0 8 * * *}
+    command: node src/jobs/worker.js
+
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: /api
+    container_name: sweety-client
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  sweety_pgdata:
